@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Version
-set(APP_VERSION "4.2.0")
+set(APP_VERSION "4.3.0")
 
 add_executable(winrar-keygen
     _tmain.cpp
@@ -20,6 +20,7 @@ add_executable(winrar-keygen
 )
 
 if(WIN32)
+    enable_language(RC)
     target_sources(winrar-keygen PRIVATE winrar-keygen.rc)
 endif()
 

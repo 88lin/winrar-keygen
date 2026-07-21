@@ -25,7 +25,7 @@
 #endif
 
 #ifndef APP_VERSION
-#define APP_VERSION "4.2.0"
+#define APP_VERSION "4.3.0"
 #endif
 
 #ifdef _WIN32
@@ -392,6 +392,15 @@ std::string ExtractTagFromJson(const std::string& responseBody) {
 int CompareAndPrintUpdate(const std::string& currentVersion, const std::string& remoteTag) {
     Version local = ParseVersion(currentVersion);
     Version remote = ParseVersion(remoteTag);
+
+    if (!local.valid) {
+#ifdef _WIN32
+        std::wcerr << L"Error: Could not parse current version '" << Utf8ToWide(currentVersion) << L"'.\n";
+#else
+        std::cerr << "Error: Could not parse current version '" << currentVersion << "'.\n";
+#endif
+        return -1;
+    }
 
     if (!remote.valid) {
 #ifdef _WIN32
