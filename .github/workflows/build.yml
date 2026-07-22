@@ -43,17 +43,65 @@ jobs:
         with:
           vcpkgGitCommitId: '496a397e0e13e5cc6f897f740986a9523f3a282d'
 
-      - name: Integrate vcpkg
-        run: vcpkg integrate install
-
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
         with:
           vs-version: '[17.0,18.0)'
+          msbuild-architecture: x64
+
+      - name: Configure vcpkg
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          "VCPKG_BINARY_SOURCES=clear;default,readwrite" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          if (-not $env:VCPKG_ROOT) {
+            $env:VCPKG_ROOT = Join-Path $env:GITHUB_WORKSPACE "vcpkg"
+          }
+          "VCPKG_ROOT=$env:VCPKG_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          $portfile = Join-Path $env:VCPKG_ROOT "ports/gmp/portfile.cmake"
+          $content = Get-Content -Path $portfile -Raw
+          $content = $content.Replace(
+            "https://mirror.msys2.org/msys/x86_64/autoconf2.71-2.71-3-any.pkg.tar.zst",
+            "https://repo.msys2.org/msys/x86_64/autoconf2.71-2.71-4-any.pkg.tar.zst"
+          )
+          $content = $content.Replace(
+            "dd312c428b2e19afd00899eb53ea4255794dea4c19d1d6dea2419cb6a54209ea2130d48abbc20af12196b9f628143436f736fbf889809c2c2291be0c69c0e306",
+            "c93b791eb55893cbe7c425e764074837355fd165deb7b1775f652c8e25d9d1f0cdd4120ab710d56fb859b7df55c4f971eccda7c112448f60615bff8a2dc81166"
+          )
+          if ($content -notmatch "autoconf2\.71-2\.71-4") {
+            throw "Failed to patch gmp portfile to autoconf2.71-2.71-4"
+          }
+          Set-Content -Path $portfile -Value $content -NoNewline
+
+          $downloads = Join-Path $env:VCPKG_ROOT "downloads"
+          New-Item -ItemType Directory -Force -Path $downloads | Out-Null
+          $archive = Join-Path $downloads "autoconf2.71-2.71-4-any.pkg.tar.zst"
+          curl.exe -L --retry 5 --retry-delay 5 -o $archive "https://repo.msys2.org/msys/x86_64/autoconf2.71-2.71-4-any.pkg.tar.zst"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download autoconf2.71 package"
+          }
+          $expected = "c93b791eb55893cbe7c425e764074837355fd165deb7b1775f652c8e25d9d1f0cdd4120ab710d56fb859b7df55c4f971eccda7c112448f60615bff8a2dc81166"
+          $actual = (Get-FileHash -Path $archive -Algorithm SHA512).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "SHA512 mismatch for autoconf2.71 package: $actual"
+          }
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          vcpkg install --x-wait-for-lock --triplet "x64-windows-static" --vcpkg-root "$env:VCPKG_ROOT\" "--x-manifest-root=$env:GITHUB_WORKSPACE\" "--x-install-root=$env:GITHUB_WORKSPACE\vcpkg_installed\x64-windows-static\"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Integrate vcpkg
+        run: vcpkg integrate install
 
       - name: Build
         run: |
-          msbuild winrar-keygen.vcxproj /p:Configuration=Release /p:Platform=x64 /p:VcpkgEnableManifest=true
+          msbuild winrar-keygen.vcxproj /p:Configuration=Release /p:Platform=x64 /p:VcpkgEnableManifest=true /p:VcpkgManifestInstall=false
 
       - name: Prepare artifact
         shell: pwsh
@@ -79,17 +127,65 @@ jobs:
         with:
           vcpkgGitCommitId: '496a397e0e13e5cc6f897f740986a9523f3a282d'
 
-      - name: Integrate vcpkg
-        run: vcpkg integrate install
-
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
         with:
           vs-version: '[17.0,18.0)'
+          msbuild-architecture: x64
+
+      - name: Configure vcpkg
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          "VCPKG_BINARY_SOURCES=clear;default,readwrite" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          if (-not $env:VCPKG_ROOT) {
+            $env:VCPKG_ROOT = Join-Path $env:GITHUB_WORKSPACE "vcpkg"
+          }
+          "VCPKG_ROOT=$env:VCPKG_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          $portfile = Join-Path $env:VCPKG_ROOT "ports/gmp/portfile.cmake"
+          $content = Get-Content -Path $portfile -Raw
+          $content = $content.Replace(
+            "https://mirror.msys2.org/msys/x86_64/autoconf2.71-2.71-3-any.pkg.tar.zst",
+            "https://repo.msys2.org/msys/x86_64/autoconf2.71-2.71-4-any.pkg.tar.zst"
+          )
+          $content = $content.Replace(
+            "dd312c428b2e19afd00899eb53ea4255794dea4c19d1d6dea2419cb6a54209ea2130d48abbc20af12196b9f628143436f736fbf889809c2c2291be0c69c0e306",
+            "c93b791eb55893cbe7c425e764074837355fd165deb7b1775f652c8e25d9d1f0cdd4120ab710d56fb859b7df55c4f971eccda7c112448f60615bff8a2dc81166"
+          )
+          if ($content -notmatch "autoconf2\.71-2\.71-4") {
+            throw "Failed to patch gmp portfile to autoconf2.71-2.71-4"
+          }
+          Set-Content -Path $portfile -Value $content -NoNewline
+
+          $downloads = Join-Path $env:VCPKG_ROOT "downloads"
+          New-Item -ItemType Directory -Force -Path $downloads | Out-Null
+          $archive = Join-Path $downloads "autoconf2.71-2.71-4-any.pkg.tar.zst"
+          curl.exe -L --retry 5 --retry-delay 5 -o $archive "https://repo.msys2.org/msys/x86_64/autoconf2.71-2.71-4-any.pkg.tar.zst"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download autoconf2.71 package"
+          }
+          $expected = "c93b791eb55893cbe7c425e764074837355fd165deb7b1775f652c8e25d9d1f0cdd4120ab710d56fb859b7df55c4f971eccda7c112448f60615bff8a2dc81166"
+          $actual = (Get-FileHash -Path $archive -Algorithm SHA512).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "SHA512 mismatch for autoconf2.71 package: $actual"
+          }
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          vcpkg install --x-wait-for-lock --triplet "x86-windows-static" --vcpkg-root "$env:VCPKG_ROOT\" "--x-manifest-root=$env:GITHUB_WORKSPACE\" "--x-install-root=$env:GITHUB_WORKSPACE\vcpkg_installed\x86-windows-static\"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Integrate vcpkg
+        run: vcpkg integrate install
 
       - name: Build
         run: |
-          msbuild winrar-keygen.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:VcpkgEnableManifest=true
+          msbuild winrar-keygen.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:VcpkgEnableManifest=true /p:VcpkgManifestInstall=false
 
       - name: Prepare artifact
         shell: pwsh
@@ -115,17 +211,65 @@ jobs:
         with:
           vcpkgGitCommitId: '496a397e0e13e5cc6f897f740986a9523f3a282d'
 
-      - name: Integrate vcpkg
-        run: vcpkg integrate install
-
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
         with:
           vs-version: '[17.0,18.0)'
+          msbuild-architecture: x64
+
+      - name: Configure vcpkg
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          "VCPKG_BINARY_SOURCES=clear;default,readwrite" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          if (-not $env:VCPKG_ROOT) {
+            $env:VCPKG_ROOT = Join-Path $env:GITHUB_WORKSPACE "vcpkg"
+          }
+          "VCPKG_ROOT=$env:VCPKG_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          $portfile = Join-Path $env:VCPKG_ROOT "ports/gmp/portfile.cmake"
+          $content = Get-Content -Path $portfile -Raw
+          $content = $content.Replace(
+            "https://mirror.msys2.org/msys/x86_64/autoconf2.71-2.71-3-any.pkg.tar.zst",
+            "https://repo.msys2.org/msys/x86_64/autoconf2.71-2.71-4-any.pkg.tar.zst"
+          )
+          $content = $content.Replace(
+            "dd312c428b2e19afd00899eb53ea4255794dea4c19d1d6dea2419cb6a54209ea2130d48abbc20af12196b9f628143436f736fbf889809c2c2291be0c69c0e306",
+            "c93b791eb55893cbe7c425e764074837355fd165deb7b1775f652c8e25d9d1f0cdd4120ab710d56fb859b7df55c4f971eccda7c112448f60615bff8a2dc81166"
+          )
+          if ($content -notmatch "autoconf2\.71-2\.71-4") {
+            throw "Failed to patch gmp portfile to autoconf2.71-2.71-4"
+          }
+          Set-Content -Path $portfile -Value $content -NoNewline
+
+          $downloads = Join-Path $env:VCPKG_ROOT "downloads"
+          New-Item -ItemType Directory -Force -Path $downloads | Out-Null
+          $archive = Join-Path $downloads "autoconf2.71-2.71-4-any.pkg.tar.zst"
+          curl.exe -L --retry 5 --retry-delay 5 -o $archive "https://repo.msys2.org/msys/x86_64/autoconf2.71-2.71-4-any.pkg.tar.zst"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download autoconf2.71 package"
+          }
+          $expected = "c93b791eb55893cbe7c425e764074837355fd165deb7b1775f652c8e25d9d1f0cdd4120ab710d56fb859b7df55c4f971eccda7c112448f60615bff8a2dc81166"
+          $actual = (Get-FileHash -Path $archive -Algorithm SHA512).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "SHA512 mismatch for autoconf2.71 package: $actual"
+          }
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          vcpkg install --x-wait-for-lock --triplet "arm64-windows-static" --vcpkg-root "$env:VCPKG_ROOT\" "--x-manifest-root=$env:GITHUB_WORKSPACE\" "--x-install-root=$env:GITHUB_WORKSPACE\vcpkg_installed\arm64-windows-static\"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Integrate vcpkg
+        run: vcpkg integrate install
 
       - name: Build
         run: |
-          msbuild winrar-keygen.vcxproj /p:Configuration=Release /p:Platform=ARM64 /p:VcpkgEnableManifest=true
+          msbuild winrar-keygen.vcxproj /p:Configuration=Release /p:Platform=ARM64 /p:VcpkgEnableManifest=true /p:VcpkgManifestInstall=false
 
       - name: Prepare artifact
         shell: pwsh
