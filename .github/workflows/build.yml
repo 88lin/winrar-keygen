@@ -41,7 +41,7 @@ jobs:
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11.6
         with:
-          vcpkgGitCommitId: 'cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3'
+          vcpkgGitCommitId: '496a397e0e13e5cc6f897f740986a9523f3a282d'
 
       - name: Integrate vcpkg
         run: vcpkg integrate install
@@ -77,7 +77,7 @@ jobs:
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11.6
         with:
-          vcpkgGitCommitId: 'cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3'
+          vcpkgGitCommitId: '496a397e0e13e5cc6f897f740986a9523f3a282d'
 
       - name: Integrate vcpkg
         run: vcpkg integrate install
@@ -113,7 +113,7 @@ jobs:
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11.6
         with:
-          vcpkgGitCommitId: 'cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3'
+          vcpkgGitCommitId: '496a397e0e13e5cc6f897f740986a9523f3a282d'
 
       - name: Integrate vcpkg
         run: vcpkg integrate install
